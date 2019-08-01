@@ -11,6 +11,8 @@ func CreateAccount(res http.ResponseWriter, req *http.Request) {
 
 	account := &models.Account{} //instantiate a account object
 
+	// fmt.Printf("This is the first result: %v\n", req.Body)
+
 	err := json.NewDecoder(req.Body).Decode(account)
 	if err != nil {
 		u.Respond(res, u.Message(false, "Error while decoding the body"))

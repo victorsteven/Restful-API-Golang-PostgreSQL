@@ -12,7 +12,6 @@ import (
 )
 
 func GetHomePage(res http.ResponseWriter, req *http.Request) {
-	// fmt.Println("This is the home page")
 	u.Respond(res, u.Message(true, "Welcome to the home page"))
 }
 

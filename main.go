@@ -10,9 +10,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type App struct {
-}
-
 func main() {
 
 	router := mux.NewRouter()

@@ -1,0 +1,22 @@
+{
+  "prod": {
+      "host": "127.0.0.1"
+  },
+  "development": {
+		"host": "127.0.0.1",
+		"dbuser": "steven",
+		"dbpass": "",
+		"dbname": "rest_api_gorm",
+		"port": "5432",
+		"tokenpassword": "helloworld"
+	},
+	
+  "test": {
+		"host": "127.0.0.1",
+		"dbuser": "steven",
+		"dbpass": "",
+		"dbname": "rest_api_gorm_test",
+		"port": "5432",
+		"tokenpassword": "helloworldtest"
+  }
+}
