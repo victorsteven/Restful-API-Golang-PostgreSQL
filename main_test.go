@@ -12,11 +12,25 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jinzhu/gorm"
-	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
+
+// type Contact struct {
+// 	gorm.Model
+// 	Name   string `json:"name"`
+// 	Phone  string `json:"phone"`
+// 	UserId uint   `json:"user_id"` //The user that this contact belongs to
+// }
+
+// type Account struct {
+// 	gorm.Model
+// 	Email    string `json:"email"`
+// 	Password string `json:"password"`
+// 	Token    string `json:"token";sql:"-"`
+// }
+
+var a controllers.App
 
 func TestMain(m *testing.M) {
 
@@ -33,69 +47,31 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("unable to decode into struct, %v", err)
 	}
+	a = controllers.App{}
 
-	dbUri := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s", conn.Host, conn.DbUser, conn.DbName, conn.DbPass)
+	fmt.Printf("this is the database name: %v\n", conn.DbName)
 
-	fmt.Println(dbUri)
+	a.Initialize(conn.Host, conn.DbUser, conn.DbPass, conn.DbName)
 
-	conn, err := gorm.Open("postgres", dbUri)
-	if err != nil {
-		fmt.Println(err)
-	}
-	db = conn
-	db.Debug().AutoMigrate(&Account{}, &Contact{}) //database migration
-}
+	// ensureTableExists()
 
-type Contact struct {
-	gorm.Model
-	Name   string `json:"name"`
-	Phone  string `json:"phone"`
-	UserId uint   `json:"user_id"` //The user that this contact belongs to
-}
+	code := m.Run()
 
-type Account struct {
-	gorm.Model
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Token    string `json:"token";sql:"-"`
-}
-
-var db *gorm.DB
-
-func init() {
-	err := godotenv.Load() //load the .env file
-	if err != nil {
-		fmt.Println(err)
-	}
-	username := os.Getenv("db_user_test")
-	password := os.Getenv("db_pass_test")
-	dbName := os.Getenv("db_name_test")
-	dbHost := os.Getenv("db_host_test")
-
-	dbUri := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s", dbHost, username, dbName, password)
-
-	conn, err := gorm.Open("postgres", dbUri)
-	if err != nil {
-		fmt.Println(err)
-	}
-	db = conn
-	db.Debug().AutoMigrate(&Account{}, &Contact{}) //database migration
+	os.Exit(code)
 }
 
 func clearTable() {
-	db.Exec("DELETE FROM accounts")
-	db.Exec("ALTER SEQUENCE accounts_id_seq RESTART WITH 1")
+	a.DB.Exec("DELETE FROM accounts")
+	a.DB.Exec("ALTER SEQUENCE accounts_id_seq RESTART WITH 1")
 }
 
-// func executeRequest(req *http.Request) *httptest.ResponseRecorder {
-// 	rr := httptest.NewRecorder()
-// 	a.Router.ServeHTTP(rr, req)
-// 	return rr
-// }
-
-// func checkResponseCode(t *testing.T, expected, actual int) {
-// 	if expected != actual {
-// 		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
+// func TestEmptyTable(t *testing.T) {
+// 	clearTable()
+// 	req, _ := http.NewRequest("GET", "/users", nil)
+// 	response := executeRequest(req)
+// 	checkResponseCode(t, http.StatusOK, response.Code)
+// 	if body := response.Body.String(); body != "[]" {
+// 		t.Errorf("Expected an empty array. Got %s", body)
 // 	}
 // }
 
@@ -125,15 +101,15 @@ func TestGetHomePage(t *testing.T) {
 }
 
 func TestCreateAccount(t *testing.T) {
-	// clearTable()
+	clearTable()
 
-	payload := []byte(`{"email": "gobimermaar@gmail.com", "password": "password"}`)
+	payload := []byte(`{"email": "pet@gmail.com", "password": "password"}`)
 	req, err := http.NewRequest("POST", "/api/user/new", bytes.NewBuffer(payload))
 	if err != nil {
 		log.Fatalf("This is the error %v", err)
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(controllers.CreateAccount)
+	handler := http.HandlerFunc(a.CreateAccount)
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -141,7 +117,7 @@ func TestCreateAccount(t *testing.T) {
 	}
 	expected := map[string]interface{}{
 		"account": map[string]interface{}{
-			"email": "gobimermaar@gmail.com",
+			"email": "pet@gmail.com",
 		},
 		"message": "Account has been created",
 		"status":  true,
@@ -155,32 +131,97 @@ func TestCreateAccount(t *testing.T) {
 	assert.Equal(t, jsonMap["status"], expected["status"])
 	assert.Equal(t, jsonMap["account"].(map[string]interface{})["email"], expected["account"].(map[string]interface{})["email"])
 
-	// Check for duplicate emails
-	// payload2 := []byte(`{"email": "gobimermaar@gmail.com", "password": "password"}`)
-	// req2, err2 := http.NewRequest("POST", "/api/user/new", bytes.NewBuffer(payload2))
-	// if err2 != nil {
-	// 	log.Fatalf("This is the error %v", err2)
-	// }
-	// rr2 := httptest.NewRecorder()
-	// handler2 := http.HandlerFunc(controllers.CreateAccount)
-	// handler2.ServeHTTP(rr2, req2)
+	//Check for duplicate emails
+	payload2 := []byte(`{"email": "pet@gmail.com", "password": "password"}`)
+	req2, err2 := http.NewRequest("POST", "/api/user/new", bytes.NewBuffer(payload2))
+	if err2 != nil {
+		log.Fatalf("This is the error %v", err2)
+	}
+	rr2 := httptest.NewRecorder()
+	handler2 := http.HandlerFunc(a.CreateAccount)
+	handler2.ServeHTTP(rr2, req2)
 
-	// if status2 := rr2.Code; status2 != http.StatusOK {
-	// 	t.Errorf("Handler returned wrong status code: got %v want %v", status2, http.StatusOK)
-	// }
-	// expected2 := map[string]interface{}{
-	// 	"account": map[string]interface{}{
-	// 		"email": "gobimermaar@gmail.com",
-	// 	},
-	// 	"message": "Email address already in use",
-	// 	"status":  false,
-	// }
-	// jsonMap2 := make(map[string]interface{})
-	// err2 = json.Unmarshal([]byte(rr2.Body.String()), &jsonMap2)
-	// if err2 != nil {
-	// 	log.Fatal("Could not convert the map to json")
-	// }
-	// assert.Equal(t, jsonMap2["message"], expected2["message"])
-	// assert.Equal(t, jsonMap2["status"], expected2["status"])
-	// assert.Equal(t, jsonMap["account"].(map[string]interface{})["email"], expected["account"].(map[string]interface{})["email"])
+	if status2 := rr2.Code; status2 != http.StatusOK {
+		t.Errorf("Handler returned wrong status code: got %v want %v", status2, http.StatusOK)
+	}
+	expected2 := map[string]interface{}{
+		"account": map[string]interface{}{
+			"email": "pet@gmail.com",
+		},
+		"message": "Email address already in use",
+		"status":  false,
+	}
+	jsonMap2 := make(map[string]interface{})
+	err2 = json.Unmarshal([]byte(rr2.Body.String()), &jsonMap2)
+	if err2 != nil {
+		log.Fatal("Could not convert the map to json")
+	}
+	assert.Equal(t, jsonMap2["message"], expected2["message"])
+	assert.Equal(t, jsonMap2["status"], expected2["status"])
+	assert.Equal(t, jsonMap["account"].(map[string]interface{})["email"], expected["account"].(map[string]interface{})["email"])
+}
+
+func TestUserLogin(t *testing.T) {
+	clearTable()
+	payload := []byte(`{"email": "pet@gmail.com", "password": "password"}`)
+	req, err := http.NewRequest("POST", "/api/user/new", bytes.NewBuffer(payload))
+	if err != nil {
+		log.Fatalf("This is the error %v", err)
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(a.CreateAccount)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("Handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+	expected := map[string]interface{}{
+		"account": map[string]interface{}{
+			"email": "pet@gmail.com",
+		},
+		"message": "Account has been created",
+		"status":  true,
+	}
+	jsonMap := make(map[string]interface{})
+	err = json.Unmarshal([]byte(rr.Body.String()), &jsonMap)
+	if err != nil {
+		log.Fatal("Could not convert the map to json")
+	}
+	userToken := jsonMap["account"].(map[string]interface{})["token"]
+	userTokenString := fmt.Sprintf("%v", userToken) //Converting the interface token to string
+	assert.Equal(t, jsonMap["message"], expected["message"])
+	assert.Equal(t, jsonMap["status"], expected["status"])
+	assert.Equal(t, jsonMap["account"].(map[string]interface{})["email"], expected["account"].(map[string]interface{})["email"])
+
+	loginPayload := []byte(`{"email": "pet@gmail.com", "password": "password"}`)
+
+	reqLogin, errLogin := http.NewRequest("POST", "/api/user/login", bytes.NewBuffer(loginPayload))
+	if errLogin != nil {
+		log.Fatalf("This is the error %v", errLogin)
+	}
+	// Set the authentication token here:
+	reqLogin.Header.Set("Authorization", "Bearer "+userTokenString)
+
+	rrLogin := httptest.NewRecorder()
+	handlerLogin := http.HandlerFunc(a.UserLogin)
+	handlerLogin.ServeHTTP(rrLogin, reqLogin)
+
+	if statusLogin := rrLogin.Code; statusLogin != http.StatusOK {
+		t.Errorf("Handler returned wrong status code: got %v want %v", statusLogin, http.StatusOK)
+	}
+	expectedLogin := map[string]interface{}{
+		"account": map[string]interface{}{
+			"email": "pet@gmail.com",
+		},
+		"message": "Logged In",
+		"status":  true,
+	}
+	jsonMapLogin := make(map[string]interface{})
+	errLogin = json.Unmarshal([]byte(rrLogin.Body.String()), &jsonMapLogin)
+	if errLogin != nil {
+		log.Fatal("Could not convert the map to json")
+	}
+	assert.Equal(t, jsonMapLogin["message"], expectedLogin["message"])
+	assert.Equal(t, jsonMapLogin["status"], expectedLogin["status"])
+	assert.Equal(t, jsonMapLogin["account"].(map[string]interface{})["email"], expectedLogin["account"].(map[string]interface{})["email"])
 }

@@ -14,7 +14,7 @@ type Contact struct {
 	UserId uint   `json:"user_id"` //The user that this contact belongs to
 }
 
-func (contact *Contact) Validate() (map[string]interface{}, bool) {
+func (contact *Contact) Validate(db *gorm.DB) (map[string]interface{}, bool) {
 	if contact.Name == "" {
 		return u.Message(false, "Contact name should be on the payload"), false
 	}
@@ -28,13 +28,11 @@ func (contact *Contact) Validate() (map[string]interface{}, bool) {
 	return u.Message(true, "success"), true
 }
 
-func (contact *Contact) Create() map[string]interface{} {
-	if resp, ok := contact.Validate(); !ok {
+func (contact *Contact) Create(db *gorm.DB) map[string]interface{} {
+	if resp, ok := contact.Validate(db); !ok {
 		return resp
 	}
-
-	GetDB().Create(contact)
-
+	db.Create(contact)
 	resp := u.Message(true, "success")
 	resp["contact"] = contact
 	return resp
@@ -49,9 +47,9 @@ func (contact *Contact) Create() map[string]interface{} {
 // 	return contact
 // }
 
-func GetContacts(user uint) []*Contact {
+func GetContacts(db *gorm.DB, user uint) []*Contact {
 	contacts := make([]*Contact, 0)
-	err := GetDB().Table("contacts").Where("user_id = ?", user).Find(&contacts).Error
+	err := db.Table("contacts").Where("user_id = ?", user).Find(&contacts).Error
 	if err != nil {
 		fmt.Println(err)
 		return nil

@@ -2,39 +2,41 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"os"
-	"rest_api_gorm/app"
+	"log"
+
 	"rest_api_gorm/controllers"
 
-	"github.com/gorilla/mux"
+	"github.com/spf13/viper"
 )
+
+type Connection struct {
+	Host   string
+	DbUser string
+	DbName string
+	DbPass string
+}
+
+var conn Connection
 
 func main() {
 
-	router := mux.NewRouter()
-	router.Use(app.JwtAuthentication)
+	a := controllers.App{}
 
-	//Get port from .env file, we did not specify any port so this should return an empty string when tested locally
-
-	router.HandleFunc("/", controllers.GetHomePage).Methods("GET")
-	router.HandleFunc("/api/user/new", controllers.CreateAccount).Methods("POST")
-	router.HandleFunc("/api/user/login", controllers.Authenticate).Methods("POST")
-	router.HandleFunc("/api/contacts/new", controllers.CreateContact).Methods("POST")
-	router.HandleFunc("/api/{id}/contacts", controllers.GetContactsFor).Methods("GET")
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "7000"
+	viper.SetConfigFile("./config.json")
+	// Searches for config file in given paths and read it
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("Error reading config file, %s", err)
 	}
-	fmt.Println("This is the port: ", port)
+	// Confirm which config file is used
+	fmt.Printf("Using config: %s\n", viper.ConfigFileUsed())
 
-	err := http.ListenAndServe(":"+port, router)
+	developmentData := viper.Sub("development")
+	err := developmentData.Unmarshal(&conn)
 	if err != nil {
-		fmt.Println("This is the error: ", err)
+		log.Fatalf("unable to decode into struct, %v", err)
 	}
-}
 
-func getme(res http.ResponseWriter, req *http.Request) {
-	fmt.Println(res, "hello sir")
+	a.Initialize(conn.Host, conn.DbUser, conn.DbPass, conn.DbName)
+
+	a.Run(":8000")
 }

@@ -1,64 +1,54 @@
 package models
 
-import (
-	"fmt"
-	"log"
+// _ "github.com/jinzhu/gorm/dialects/postgres"
+// _ "github.com/go-sql-driver/mysql"
 
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/spf13/viper"
+// type App struct {
+// 	Router *mux.Router
+// 	DB     *gorm.DB
+// }
 
-	"github.com/jinzhu/gorm"
-)
+// func (a *App) Initialize(host, user, password, dbname string) {
+// 	dbUri := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s", host, user, dbname, password)
+// 	var err error
+// 	a.DB, err = gorm.Open("postgres", dbUri)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	a.DB.Debug().AutoMigrate(&Account{}, &Contact{}) //database migration
 
-type Connection struct {
-	Host   string
-	DbUser string
-	DbName string
-	DbPass string
-}
+// 	a.Router = mux.NewRouter()
+// 	a.initializeRoutes()
 
-var conn Connection
+// }
 
-var db *gorm.DB
+// func (a *App) initializeRoutes() {
+// 	a.Router.HandleFunc("/users", a.getUsers).Methods("GET")
+// 	a.Router.HandleFunc("/user", a.createUser).Methods("POST")
+// 	a.Router.HandleFunc("/user/{id:[0-9]+}", a.getUser).Methods("GET")
+// 	a.Router.HandleFunc("/user/{id:[0-9]+}", a.updateUser).Methods("PUT")
+// 	a.Router.HandleFunc("/user/{id:[0-9]+}", a.deleteUser).Methods("DELETE")
+// }
 
-func init() {
-	// a := App{}
-	viper.SetConfigFile("./config.json")
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Error reading config file, %s", err)
-	}
-	fmt.Printf("Using config: %s\n", viper.ConfigFileUsed())
+// type Connection struct {
+// 	Host   string
+// 	DbUser string
+// 	DbName string
+// 	DbPass string
+// }
 
-	developmentData := viper.Sub("development")
-	err := developmentData.Unmarshal(&conn)
-	if err != nil {
-		log.Fatalf("unable to decode into struct, %v", err)
-	}
-	// a.Initialize("steven", "here", "api_medium_kelvin")
-	dbUri := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s", conn.Host, conn.DbUser, conn.DbName, conn.DbPass)
+// var conn Connection
 
-	// a.Run(":8000")
-	// err := godotenv.Load() //load the .env file
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// username := os.Getenv("db_user")
-	// password := os.Getenv("db_pass")
-	// dbName := os.Getenv("db_name")
-	// dbHost := os.Getenv("db_host")
-
-	fmt.Println(dbUri)
-
-	conn, err := gorm.Open("postgres", dbUri)
-	if err != nil {
-		fmt.Println(err)
-	}
-	db = conn
-	db.Debug().AutoMigrate(&Account{}, &Contact{}) //database migration
-}
-
-//Return a handle to the DB object
-
-func GetDB() *gorm.DB {
-	return db
-}
+// func init() {
+// 	viper.SetConfigFile("./config.json")
+// 	if err := viper.ReadInConfig(); err != nil {
+// 		log.Fatalf("Error reading config file, %s", err)
+// 	}
+// 	fmt.Printf("Using config dev: %s\n", viper.ConfigFileUsed())
+// 	developmentData := viper.Sub("development")
+// 	err := developmentData.Unmarshal(&conn)
+// 	if err != nil {
+// 		log.Fatalf("unable to decode into struct, %v", err)
+// 	}
+// 	// InitConnection(conn.Host, conn.DbUser, conn.DbName, conn.DbPass)
+// }
